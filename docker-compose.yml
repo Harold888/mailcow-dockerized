@@ -398,27 +398,32 @@ services:
         - ./data/conf/nginx/:/etc/nginx/conf.d/:z
         - ./data/conf/rspamd/meta_exporter:/meta_exporter:ro,z
         - sogo-web-vol-1:/usr/lib/GNUstep/SOGo/
+      # -------------------------------------------------------------------
+      # Ya NO se publican 80/443 al host: Dokploy/Traefik ya los ocupa.
+      # Todo el dominio se controla desde .env vía MAILCOW_HOSTNAME.
+      # -------------------------------------------------------------------
       labels:
-        # Habilitar Traefik para este contenedor
         - "traefik.enable=true"
+        - "traefik.docker.network=dokploy-network"
 
-        # Router para tráfico HTTPS
-        - "traefik.http.routers.mailcow.rule=Host(`mail.proyeccionlaboral.com`)"
-        - "traefik.http.routers.mailcow.entrypoints=websecure"
-        - "traefik.http.routers.mailcow.tls=true"
-        - "traefik.http.routers.mailcow.tls.certresolver=letsencrypt"
-        - "traefik.http.services.mailcow.loadbalancer.server.port=80"
+        # Router HTTP SOLO para el challenge ACME propio de Mailcow (HTTP-01,
+        # texto plano). Deja pasar /.well-known/acme-challenge/* hacia
+        # nginx-mailcow puerto 80 interno, sin que Traefik lo intercepte.
+        - "traefik.http.routers.mailcow-acme.rule=Host(`${MAILCOW_HOSTNAME}`) && PathPrefix(`/.well-known/acme-challenge/`)"
+        - "traefik.http.routers.mailcow-acme.entrypoints=web"
+        - "traefik.http.routers.mailcow-acme.service=mailcow-http"
+        - "traefik.http.services.mailcow-http.loadbalancer.server.port=80"
 
-        # Router para redirigir tráfico HTTP a HTTPS
-        - "traefik.http.routers.mailcow-http.rule=Host(`mail.proyeccionlaboral.com`)"
-        - "traefik.http.routers.mailcow-http.entrypoints=web"
-        - "traefik.http.routers.mailcow-http.middlewares=redirect-to-https"
-        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      ports:
-        - "${HTTPS_BIND:-}:${HTTPS_PORT:-443}:${HTTPS_PORT:-443}"
-        - "${HTTP_BIND:-}:${HTTP_PORT:-80}:${HTTP_PORT:-80}"
+        # Router TCP con passthrough por SNI para HTTPS: Traefik NO descifra,
+        # solo reenvía el stream crudo. El certificado real lo sirve
+        # nginx-mailcow (el emitido por acme-mailcow), no Traefik.
+        - "traefik.tcp.routers.mailcow.rule=HostSNI(`${MAILCOW_HOSTNAME}`)"
+        - "traefik.tcp.routers.mailcow.entrypoints=websecure"
+        - "traefik.tcp.routers.mailcow.tls.passthrough=true"
+        - "traefik.tcp.services.mailcow.loadbalancer.server.port=443"
       restart: always
       networks:
+        dokploy-network:
         mailcow-network:
           aliases:
             - nginx
@@ -647,6 +652,8 @@ services:
         - /lib/modules:/lib/modules:ro
 
 networks:
+  dokploy-network:
+    external: true
   mailcow-network:
     driver: bridge
     driver_opts:
