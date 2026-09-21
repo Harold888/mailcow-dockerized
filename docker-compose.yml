@@ -388,27 +388,8 @@ services:
       - ./data/conf/rspamd/meta_exporter:/meta_exporter:ro,z
       - sogo-web-vol-1:/usr/lib/GNUstep/SOGo/
     labels:
-      - traefik.docker.network=dokploy-network
-      - traefik.http.routers.mail-mailcow-5afdnd-18-web.rule=Host(`mail.nixstacks.com`)
-      - traefik.http.routers.mail-mailcow-5afdnd-18-web.entrypoints=web
-      - traefik.http.services.mail-mailcow-5afdnd-18-web.loadbalancer.server.port=8880
-      - traefik.http.routers.mail-mailcow-5afdnd-18-web.service=mail-mailcow-5afdnd-18-web
-      - traefik.http.routers.mail-mailcow-5afdnd-18-web.middlewares=redirect-to-https@file
-      - traefik.http.routers.mail-mailcow-5afdnd-18-websecure.rule=Host(`mail.nixstacks.com`)
-      - traefik.http.routers.mail-mailcow-5afdnd-18-websecure.entrypoints=websecure
-      - traefik.http.services.mail-mailcow-5afdnd-18-websecure.loadbalancer.server.port=8880
-      - traefik.http.routers.mail-mailcow-5afdnd-18-websecure.service=mail-mailcow-5afdnd-18-websecure
-      - traefik.http.routers.mail-mailcow-5afdnd-18-websecure.tls.certresolver=letsencrypt
       - traefik.enable=true
-      - traefik.http.routers.mailcow.rule=Host(`mail.nixstacks.com`)
-      - traefik.http.routers.mailcow.entrypoints=websecure
-      - traefik.http.routers.mailcow.tls=true
-      - traefik.http.routers.mailcow.tls.certresolver=letsencrypt
-      - traefik.http.services.mailcow.loadbalancer.server.port=80
-      - traefik.http.routers.mailcow-http.rule=Host(`mail.nixstacks.co`)
-      - traefik.http.routers.mailcow-http.entrypoints=web
-      - traefik.http.routers.mailcow-http.middlewares=redirect-to-https
-      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.docker.network=dokploy-network
     ports:
       - ${HTTPS_BIND:-}:${HTTPS_PORT:-443}:${HTTPS_PORT:-443}
       - ${HTTP_BIND:-}:${HTTP_PORT:-80}:${HTTP_PORT:-80}
